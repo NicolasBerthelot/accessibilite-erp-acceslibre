@@ -1,18 +1,24 @@
-"""Construit la carte HTML autonome de l'accessibilité des ERP (Acceslibre), avec fiches complètes.
+"""Construit le site de la carte de l'accessibilité des ERP (Acceslibre), avec fiches complètes.
 
-Usage : python3 -I build.py <fichier.parquet> <sortie.html> <template.html> <maplibre_dir> <deck.min.js>
+Usage : python3 -I build.py <fichier.parquet> <dossier_sortie> <template.html> <maplibre_dir> <deck.min.js> <date AAAA-MM-JJ>
+
+Produit dans <dossier_sortie> :
+  index.html                      la page
+  lib/                            MapLibre GL JS et deck.gl
+  donnees/erp.json.gz             établissements (positions, noms, adresses, liens)
+  donnees/criteres.bin.gz         critères d'accessibilité codés (matrice uint8 par colonne)
 """
-import base64
+import os
+import shutil
 import gzip
 import json
 import re
 import sys
 import unicodedata
-from datetime import date
 
 import duckdb
 
-src, out, template_path, mldir, deck_path = sys.argv[1:6]
+src, outdir, template_path, mldir, deck_path, extract_date = sys.argv[1:7]
 
 con = duckdb.connect()
 con.execute(f"CREATE TABLE raw AS SELECT * FROM read_parquet('{src}')")
@@ -201,24 +207,19 @@ payload = {
     "acts": acts, "actCounts": [acts_count[a] for a in acts], "communes": communes,
     "uparts": uparts, "urlPrefix": URL_PREFIX, "cols": C, "sparse": sparse,
     "fields": CODED, "dicts": dicts, "total": total, "totalRaw": total_raw,
-    "catCounts": cat_counts, "date": date.today().isoformat(),
+    "catCounts": cat_counts, "date": extract_date,
 }
 raw_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
-gz_json = gzip.compress(raw_json, compresslevel=9)
-gz_bin = gzip.compress(bytes(blob), compresslevel=9)
-b64_json = base64.b64encode(gz_json).decode()
-b64_bin = base64.b64encode(gz_bin).decode()
-print(f"JSON {len(raw_json)/1e6:.1f} Mo -> gzip {len(gz_json)/1e6:.1f} Mo ; "
-      f"matrice gzip {len(gz_bin)/1e6:.1f} Mo")
-
-tpl = open(template_path, encoding="utf-8").read()
-ml_js = open(f"{mldir}/maplibre-gl.js", encoding="utf-8").read()
-ml_css = open(f"{mldir}/maplibre-gl.css", encoding="utf-8").read()
-deck_js = open(deck_path, encoding="utf-8").read()
-html = (tpl.replace("/*__MAPLIBRE_CSS__*/", ml_css)
-           .replace("/*__MAPLIBRE_JS__*/", ml_js.replace("</script", "<\\/script"))
-           .replace("/*__DECK_JS__*/", deck_js.replace("</script", "<\\/script"))
-           .replace("__DATA_B64__", b64_json)
-           .replace("__CRIT_B64__", b64_bin))
-open(out, "w", encoding="utf-8").write(html)
-print(f"écrit {out} ({len(html)/1e6:.1f} Mo) ; catégories {cat_counts}")
+os.makedirs(f"{outdir}/donnees", exist_ok=True)
+os.makedirs(f"{outdir}/lib", exist_ok=True)
+with gzip.open(f"{outdir}/donnees/erp.json.gz", "wb", compresslevel=9) as fh:
+    fh.write(raw_json)
+with gzip.open(f"{outdir}/donnees/criteres.bin.gz", "wb", compresslevel=9) as fh:
+    fh.write(bytes(blob))
+shutil.copy(f"{mldir}/maplibre-gl.js", f"{outdir}/lib/maplibre-gl.js")
+shutil.copy(f"{mldir}/maplibre-gl.css", f"{outdir}/lib/maplibre-gl.css")
+shutil.copy(deck_path, f"{outdir}/lib/deck.gl.min.js")
+shutil.copy(template_path, f"{outdir}/index.html")
+for f in ("donnees/erp.json.gz", "donnees/criteres.bin.gz", "index.html"):
+    print(f"  {f} : {os.path.getsize(f'{outdir}/{f}')/1e6:.2f} Mo")
+print(f"catégories {cat_counts}")

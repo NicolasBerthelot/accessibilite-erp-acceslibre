@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Accessibilité des établissements recevant du public — Acceslibre</title>
-<style>/*__MAPLIBRE_CSS__*/</style>
+<link rel="stylesheet" href="lib/maplibre-gl.css">
 <style>
   :root {
     --c0: #1d4e89; --c1: #5aa9e0; --c2: #e0611b; --c3: #a3a8ae;
@@ -146,10 +146,8 @@
   </div>
 </div>
 
-<script type="text/plain" id="data">__DATA_B64__</script>
-<script type="text/plain" id="crit">__CRIT_B64__</script>
-<script>/*__MAPLIBRE_JS__*/</script>
-<script>/*__DECK_JS__*/</script>
+<script src="lib/maplibre-gl.js"></script>
+<script src="lib/deck.gl.min.js"></script>
 <script>
 (async function () {
   const CATS = [
@@ -197,16 +195,37 @@
   });
 
   // ---- Données ----
-  async function gunzip(id) {
-    const el = document.getElementById(id);
-    const resp = await fetch("data:application/octet-stream;base64," + el.textContent.trim());
-    el.textContent = "";
-    return new Response(resp.body.pipeThrough(new DecompressionStream("gzip")));
+  // Téléchargement avec suivi de progression, puis décompression gzip dans le navigateur
+  const loadingEl0 = document.getElementById("loading");
+  const progress = {};
+  const showProgress = () => {
+    const got = Object.values(progress).reduce((a, p) => a + p.got, 0);
+    const tot = Object.values(progress).reduce((a, p) => a + p.tot, 0);
+    loadingEl0.textContent = tot ? `Chargement des établissements… ${Math.round(100 * got / tot)} %` : "Chargement des établissements…";
+  };
+  async function loadGz(url) {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`${url} : HTTP ${resp.status}`);
+    progress[url] = { got: 0, tot: +resp.headers.get("Content-Length") || 0 };
+    const reader = resp.body.getReader(), chunks = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); progress[url].got += value.length; showProgress();
+    }
+    const buf = await new Blob(chunks).arrayBuffer();
+    const head = new Uint8Array(buf, 0, 2);
+    // Fichier encore compressé (cas normal) : on le décompresse ; sinon le serveur l'a déjà fait
+    if (head[0] === 0x1f && head[1] === 0x8b) {
+      return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+    }
+    return buf;
   }
   const [D, CRIT] = await Promise.all([
-    gunzip("data").then(r => r.json()),
-    gunzip("crit").then(r => r.arrayBuffer()).then(b => new Uint8Array(b))
+    loadGz("donnees/erp.json.gz").then(b => JSON.parse(new TextDecoder().decode(b))),
+    loadGz("donnees/criteres.bin.gz").then(b => new Uint8Array(b))
   ]);
+  loadingEl0.textContent = "Préparation de la carte…";
   const C = D.cols, N = C.c.length;
   // Index épars (deltas -> positions absolues, recherche dichotomique)
   function sparseIndex([deltas, values]) {
@@ -653,7 +672,8 @@
 })().catch(err => {
   console.error(err);
   const l = document.getElementById("loading");
-  if (l) l.textContent = "Impossible de charger les données : " + err.message;
+  if (l) l.textContent = "Impossible de charger les données : " + err.message
+    + (location.protocol === "file:" ? " (ouvrez la page via un serveur web, par exemple « python3 -m http.server »)" : "");
 });
 </script>
 </body>
