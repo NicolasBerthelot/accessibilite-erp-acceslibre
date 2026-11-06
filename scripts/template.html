@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibilité des établissements recevant du public — Acceslibre</title>
+<style>/*__MAPLIBRE_CSS__*/</style>
+<style>
+  :root {
+    --c0: #1d4e89; --c1: #5aa9e0; --c2: #e0611b; --c3: #a3a8ae;
+    --ink: #161616; --muted: #5e5e5e; --line: #e1e1e1; --bg: #ffffff; --soft: #f5f5f7;
+    --accent: #1d4e89;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  #app { display: flex; height: 100%; }
+  #panel { width: 340px; flex: 0 0 340px; overflow-y: auto; background: var(--bg); border-right: 1px solid var(--line); padding: 20px 20px 24px; z-index: 2; }
+  #map { flex: 1; position: relative; }
+  h1 { font-size: 19px; line-height: 1.25; margin: 0 0 6px; }
+  .lede { font-size: 13px; color: var(--muted); margin: 0 0 18px; line-height: 1.45; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; font-weight: 600; }
+  .big { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .big small { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+  .cats { display: flex; flex-direction: column; gap: 4px; }
+  .cat { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 6px; cursor: pointer; user-select: none; border: 1px solid transparent; }
+  .cat:hover { background: var(--soft); }
+  .cat.off { opacity: .4; }
+  .cat .dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+  .cat .lbl { font-size: 14px; line-height: 1.25; }
+  .cat .lbl span { display: block; font-size: 11.5px; color: var(--muted); }
+  .cat .num { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+  .cat .num span { display: block; font-size: 11.5px; color: var(--muted); }
+  .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0 4px; background: var(--soft); }
+  .bar div { height: 100%; transition: width .2s; }
+  input[type=search] { width: 100%; padding: 9px 10px; font: inherit; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
+  input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .sugg { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; max-height: 220px; overflow-y: auto; display: none; }
+  .sugg.open { display: block; }
+  .sugg li { padding: 7px 10px; font-size: 13.5px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+  .sugg li:hover, .sugg li.active { background: var(--soft); }
+  .sugg li span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: #e8eef7; color: var(--accent); border-radius: 14px; padding: 4px 6px 4px 10px; font-size: 12.5px; }
+  .chip button { border: 0; background: transparent; cursor: pointer; color: inherit; font-size: 15px; line-height: 1; padding: 0 2px; }
+  .linkbtn { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font: inherit; font-size: 12.5px; text-decoration: underline; }
+  .zones { display: flex; flex-wrap: wrap; gap: 6px; }
+  .zones button { border: 1px solid #ccc; background: #fff; border-radius: 14px; padding: 4px 10px; font-size: 12.5px; cursor: pointer; }
+  .zones button:hover { border-color: var(--accent); color: var(--accent); }
+  .note { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 22px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .note a { color: var(--muted); }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.85); z-index: 5; font-size: 15px; color: var(--muted); }
+  .maplibregl-popup-content { padding: 14px 16px 12px; border-radius: 8px; font-size: 13px; max-width: 320px; box-shadow: 0 4px 18px rgba(0,0,0,.18); }
+  .pp-act { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .pp-name { font-size: 15px; font-weight: 650; margin: 2px 0 2px; line-height: 1.25; }
+  .pp-adr { color: var(--muted); margin-bottom: 8px; }
+  .pp-status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 6px; }
+  .pp-status i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .pp ul { margin: 0; padding-left: 16px; }
+  .pp li { margin: 2px 0; }
+  .pp a { color: var(--accent); }
+  #geo-sugg li span { white-space: normal; }
+  /* Fiche établissement */
+  #fiche { position: absolute; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100%; background: #fff; z-index: 4;
+           box-shadow: -6px 0 24px rgba(0,0,0,.14); transform: translateX(105%); transition: transform .22s ease; display: flex; flex-direction: column; }
+  #fiche.open { transform: none; }
+  .f-top { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 22px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  #fiche-close { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--soft); font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
+  #fiche-close:hover { background: #e8e8ec; }
+  #fiche-body { overflow-y: auto; padding: 18px 22px 32px; flex: 1; }
+  .f-act { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .f-name { font-size: 21px; font-weight: 700; line-height: 1.2; margin: 4px 0 6px; }
+  .f-adr { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+  .f-badge { display: inline-flex; align-items: center; gap: 7px; margin: 12px 0 0; padding: 5px 11px 5px 9px; border-radius: 14px; font-size: 13px; font-weight: 600; background: var(--soft); }
+  .f-badge i { width: 11px; height: 11px; border-radius: 50%; }
+  .f-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 4px; }
+  .f-links a { font-size: 12.5px; border: 1px solid #cfd6e0; border-radius: 6px; padding: 5px 9px; color: var(--accent); text-decoration: none; background: #fff; }
+  .f-links a:hover { border-color: var(--accent); }
+  .f-links a.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .f-brief { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 18px 0 6px; }
+  .f-tile { border-radius: 8px; padding: 8px 6px 7px; background: var(--soft); text-align: center; }
+  .f-tile b { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 4px; line-height: 1.2; }
+  .f-tile span { font-size: 12.5px; font-weight: 650; line-height: 1.2; display: block; }
+  .f-tile.ok { background: #e6f1ea; } .f-tile.ok span { color: #1e6b3a; }
+  .f-tile.ko { background: #fbeae2; } .f-tile.ko span { color: #a8400c; }
+  .f-tile.na span { color: var(--muted); font-weight: 500; }
+  .f-complete { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+  .f-sec { margin-top: 20px; }
+  .f-sec h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); color: var(--ink); }
+  .f-sec h3 small { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .f-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 6px 0; border-bottom: 1px dashed #ececec; font-size: 13.5px; line-height: 1.35; }
+  .f-row:last-child { border-bottom: 0; }
+  .f-row .v { text-align: right; font-weight: 600; white-space: nowrap; }
+  .f-row .v.wrap { white-space: normal; max-width: 210px; }
+  .f-row.sub { padding-left: 14px; font-size: 13px; }
+  .f-row.sub > span:first-child::before { content: "↳ "; color: #b0b0b0; }
+  .v.ok { color: #1e6b3a; } .v.ko, .v.warn { color: #a8400c; }
+  .v.ok::before { content: "✓ "; } .v.ko::before { content: "✕ "; }
+  .f-empty { font-size: 12.5px; color: var(--muted); margin-top: 20px; line-height: 1.5; }
+  .f-meta { font-size: 11.5px; color: var(--muted); margin-top: 22px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 10px; }
+  #tip { position: absolute; pointer-events: none; z-index: 3; background: rgba(22,22,22,.88); color: #fff; font-size: 12.5px; padding: 5px 8px; border-radius: 5px; max-width: 260px; display: none; line-height: 1.3; }
+  #tip small { display: block; opacity: .75; font-size: 11px; }
+  @media (max-width: 720px) {
+    #fiche { width: 100%; }
+    #app { flex-direction: column-reverse; }
+    #panel { width: 100%; flex: 0 0 auto; max-height: 45%; border-right: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <h1>Accessibilité des entrées des établissements recevant du public</h1>
+    <p class="lede">Établissements recensés dans Acceslibre, colorés selon ce qui est déclaré sur leur entrée. Cliquez sur un point pour ouvrir sa fiche d'accessibilité complète.</p>
+
+    <div class="big" id="shown">…<small>établissements affichés</small></div>
+    <div class="bar" id="bar"></div>
+
+    <h2>Entrée</h2>
+    <div class="cats" id="cats"></div>
+
+    <h2>Type d'établissement</h2>
+    <input type="search" id="act-q" placeholder="Rechercher une activité (mairie, pharmacie…)" autocomplete="off" aria-label="Rechercher une activité">
+    <ul class="sugg" id="act-sugg" role="listbox"></ul>
+    <div class="chips" id="chips"></div>
+
+    <h2>Aller à</h2>
+    <input type="search" id="geo-q" placeholder="Commune ou adresse" autocomplete="off" aria-label="Rechercher une commune ou une adresse">
+    <ul class="sugg" id="geo-sugg"></ul>
+    <div class="zones" style="margin-top:8px">
+      <button data-b="-5.3,41.3,9.7,51.2">France métropolitaine</button>
+      <button data-b="-61.85,15.8,-61,16.55">Guadeloupe</button>
+      <button data-b="-61.25,14.38,-60.8,14.9">Martinique</button>
+      <button data-b="-54.7,2.1,-51.5,5.85">Guyane</button>
+      <button data-b="55.2,-21.4,55.85,-20.85">La Réunion</button>
+      <button data-b="44.95,-13.05,45.35,-12.6">Mayotte</button>
+    </div>
+
+    <div class="note" id="note"></div>
+  </aside>
+  <div id="map"><div id="loading">Chargement des établissements…</div>
+    <div id="tip"></div>
+    <aside id="fiche" aria-label="Fiche de l'établissement" aria-hidden="true">
+      <div class="f-top"><span>Fiche d'accessibilité</span><button id="fiche-close" aria-label="Fermer la fiche">×</button></div>
+      <div id="fiche-body"></div>
+    </aside>
+  </div>
+</div>
+
+<script type="text/plain" id="data">__DATA_B64__</script>
+<script type="text/plain" id="crit">__CRIT_B64__</script>
+<script>/*__MAPLIBRE_JS__*/</script>
+<script>/*__DECK_JS__*/</script>
+<script>
+(async function () {
+  const CATS = [
+    { label: "De plain-pied", sub: "aucune marche à l'entrée", color: "var(--c0)", hex: "#1d4e89" },
+    { label: "Accessible avec aménagement", sub: "rampe, ascenseur ou entrée PMR dédiée", color: "var(--c1)", hex: "#5aa9e0" },
+    { label: "Marches sans aménagement déclaré", sub: "ni rampe, ni ascenseur, ni entrée PMR", color: "var(--c2)", hex: "#e0611b" },
+    { label: "Non renseignée", sub: "l'entrée n'est pas décrite", color: "var(--c3)", hex: "#a3a8ae" },
+  ];
+  const fmt = new Intl.NumberFormat("fr-FR");
+  const pct = (n, t) => t ? (100 * n / t).toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " %" : "–";
+  const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+  // ---- Carte (affichée tout de suite, données ensuite) ----
+  const map = new maplibregl.Map({
+    container: "map",
+    bounds: [-5.3, 41.3, 9.7, 51.2],
+    fitBoundsOptions: { padding: 20 },
+    maxZoom: 19,
+    attributionControl: false,
+    style: {
+      version: 8,
+      sources: {
+        plan: {
+          type: "raster", tileSize: 256, maxzoom: 19,
+          tiles: ["https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"],
+          attribution: '<a href="https://geoservices.ign.fr/" target="_blank" rel="noopener">© IGN – Géoplateforme</a>'
+        }
+      },
+      layers: [
+        { id: "bg", type: "background", paint: { "background-color": "#f2f2ef" } },
+        { id: "plan", type: "raster", source: "plan", paint: { "raster-saturation": -0.85, "raster-opacity": 0.85 } }
+      ]
+    }
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+  map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+  map.addControl(new maplibregl.AttributionControl({
+    compact: true,
+    customAttribution: 'Données : <a href="https://acceslibre.beta.gouv.fr/" target="_blank" rel="noopener">Acceslibre</a> via <a href="https://www.data.gouv.fr/datasets/accessibilite-des-etablissements-recevant-du-public-erp-pour-les-personnes-en-situation-de-handicap" target="_blank" rel="noopener">data.gouv.fr</a> (Licence Ouverte 2.0)'
+  }), "bottom-right");
+  // N'attend que le style (pas les tuiles) : la couche s'affiche même si le fond tarde ou échoue.
+  const mapReady = new Promise(r => {
+    if (map.isStyleLoaded()) return r();
+    map.once("style.load", r); map.once("load", r);
+  });
+
+  // ---- Données ----
+  async function gunzip(id) {
+    const el = document.getElementById(id);
+    const resp = await fetch("data:application/octet-stream;base64," + el.textContent.trim());
+    el.textContent = "";
+    return new Response(resp.body.pipeThrough(new DecompressionStream("gzip")));
+  }
+  const [D, CRIT] = await Promise.all([
+    gunzip("data").then(r => r.json()),
+    gunzip("crit").then(r => r.arrayBuffer()).then(b => new Uint8Array(b))
+  ]);
+  const C = D.cols, N = C.c.length;
+  // Index épars (deltas -> positions absolues, recherche dichotomique)
+  function sparseIndex([deltas, values]) {
+    const idx = new Int32Array(deltas.length); let p = 0;
+    for (let j = 0; j < deltas.length; j++) { p += deltas[j]; idx[j] = p; }
+    return { idx, values };
+  }
+  function sparseGet(sp, k) {
+    let lo = 0, hi = sp.idx.length - 1;
+    while (lo <= hi) { const mid = (lo + hi) >> 1, v = sp.idx[mid]; if (v === k) return sp.values[mid]; if (v < k) lo = mid + 1; else hi = mid - 1; }
+    return undefined;
+  }
+  const SP = {}; for (const f in D.sparse) SP[f] = sparseIndex(D.sparse[f]);
+  const UC = sparseIndex(C.uc), UA = sparseIndex(C.ua);
+  const FIELD = {}; D.fields.forEach((f, j) => FIELD[f] = j);
+  // Tableaux typés : positions, couleurs et filtre passent directement au GPU (deck.gl)
+  const POS = new Float32Array(N * 2), CAT = Uint8Array.from(C.c), ACT = Uint16Array.from(C.a);
+  { let x = 0, y = 0; for (let k = 0; k < N; k++) { x += C.x[k]; y += C.y[k]; POS[2 * k] = x / 1e5; POS[2 * k + 1] = y / 1e5; } }
+  delete C.x; delete C.y; delete C.c; delete C.a;
+  const RGB = [[29, 78, 137], [90, 169, 224], [224, 97, 27], [163, 168, 174]];
+  const COL = new Uint8Array(N * 4);
+  for (let k = 0; k < N; k++) { const c = RGB[CAT[k]]; COL.set([c[0], c[1], c[2], CAT[k] === 3 ? 170 : 225], 4 * k); }
+  const VIS = new Float32Array(N);
+  let overlay = null;
+
+  // ---- Filtres ----
+  const catOn = [true, true, true, true];
+  const actSel = new Set();
+  function counts() {
+    const n = [0, 0, 0, 0];
+    if (actSel.size === 0) return D.catCounts.slice();
+    for (let k = 0; k < N; k++) if (actSel.has(ACT[k])) n[CAT[k]]++;
+    return n;
+  }
+  let filterVersion = 0;
+  function computeVisibility() {
+    const all = actSel.size === 0;
+    for (let k = 0; k < N; k++) VIS[k] = catOn[CAT[k]] && (all || actSel.has(ACT[k])) ? 1 : 0;
+    filterVersion++;
+  }
+  const catsEl = document.getElementById("cats");
+  CATS.forEach((c, k) => {
+    const el = document.createElement("div");
+    el.className = "cat"; el.tabIndex = 0; el.setAttribute("role", "checkbox"); el.setAttribute("aria-checked", "true");
+    el.innerHTML = `<i class="dot" style="background:${c.color}"></i><div class="lbl">${c.label}<span>${c.sub}</span></div><div class="num"><b id="n${k}">–</b><span id="p${k}"></span></div>`;
+    const toggle = () => { catOn[k] = !catOn[k]; el.classList.toggle("off", !catOn[k]); el.setAttribute("aria-checked", String(catOn[k])); refresh(); };
+    el.addEventListener("click", toggle);
+    el.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); } });
+    catsEl.appendChild(el);
+  });
+  function refresh() {
+    const n = counts();
+    const tot = n.reduce((a, b) => a + b, 0);
+    const shown = n.reduce((a, v, k) => a + (catOn[k] ? v : 0), 0);
+    document.getElementById("shown").innerHTML = `${fmt.format(shown)}<small>établissements affichés</small>`;
+    n.forEach((v, k) => { document.getElementById("n" + k).textContent = fmt.format(v); document.getElementById("p" + k).textContent = pct(v, tot); });
+    document.getElementById("bar").innerHTML = n.map((v, k) => `<div style="width:${tot ? 100 * v / tot : 0}%;background:${CATS[k].color};opacity:${catOn[k] ? 1 : .25}" title="${CATS[k].label} : ${pct(v, tot)}"></div>`).join("");
+    computeVisibility();
+    renderLayer();
+  }
+
+  // Activités
+  const actQ = document.getElementById("act-q"), actSugg = document.getElementById("act-sugg"), chips = document.getElementById("chips");
+  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const actNorm = D.acts.map(norm);
+  let actActive = -1;
+  function renderActSugg() {
+    const q = norm(actQ.value.trim());
+    const hits = [];
+    for (let k = 0; k < D.acts.length && hits.length < 40; k++) if (!actSel.has(k) && (!q || actNorm[k].includes(q))) hits.push(k);
+    actActive = -1;
+    actSugg.innerHTML = hits.map(k => `<li role="option" data-k="${k}">${esc(D.acts[k])}<span>${fmt.format(D.actCounts[k])}</span></li>`).join("") || `<li style="cursor:default;color:var(--muted)">Aucune activité trouvée</li>`;
+    actSugg.classList.add("open");
+  }
+  function addAct(k) { actSel.add(k); actQ.value = ""; actSugg.classList.remove("open"); renderChips(); refresh(); }
+  function renderChips() {
+    chips.innerHTML = [...actSel].map(k => `<span class="chip">${esc(D.acts[k])}<button data-k="${k}" aria-label="Retirer ${esc(D.acts[k])}">×</button></span>`).join("")
+      + (actSel.size ? `<button class="linkbtn" id="clear-acts">Toutes les activités</button>` : "");
+  }
+  actQ.addEventListener("input", renderActSugg);
+  actQ.addEventListener("focus", renderActSugg);
+  actQ.addEventListener("keydown", e => {
+    const items = [...actSugg.querySelectorAll("li[data-k]")];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); if (!items.length) return;
+      actActive = (actActive + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items.forEach((li, j) => li.classList.toggle("active", j === actActive)); items[actActive].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && items.length) { e.preventDefault(); addAct(+items[Math.max(actActive, 0)].dataset.k); }
+    else if (e.key === "Escape") actSugg.classList.remove("open");
+  });
+  actSugg.addEventListener("mousedown", e => { const li = e.target.closest("li[data-k]"); if (li) { e.preventDefault(); addAct(+li.dataset.k); } });
+  actQ.addEventListener("blur", () => setTimeout(() => actSugg.classList.remove("open"), 150));
+  chips.addEventListener("click", e => {
+    if (e.target.id === "clear-acts") actSel.clear();
+    else if (e.target.dataset.k) actSel.delete(+e.target.dataset.k);
+    else return;
+    renderChips(); refresh();
+  });
+
+  // Recherche de lieu (service d'autocomplétion de la Géoplateforme)
+  const geoQ = document.getElementById("geo-q"), geoSugg = document.getElementById("geo-sugg");
+  let geoTimer, geoRes = [];
+  geoQ.addEventListener("input", () => {
+    clearTimeout(geoTimer);
+    const q = geoQ.value.trim();
+    if (q.length < 3) { geoSugg.classList.remove("open"); return; }
+    geoTimer = setTimeout(async () => {
+      try {
+        const r = await fetch("https://data.geopf.fr/geocodage/completion/?type=StreetAddress,PositionOfInterest&maximumResponses=6&text=" + encodeURIComponent(q));
+        const j = await r.json();
+        geoRes = j.results || [];
+        geoSugg.innerHTML = geoRes.map((g, k) => `<li data-k="${k}">${esc(g.fulltext)}</li>`).join("") || `<li style="cursor:default;color:var(--muted)">Aucun résultat</li>`;
+      } catch (err) {
+        geoSugg.innerHTML = `<li style="cursor:default;color:var(--muted)">Recherche indisponible (connexion ?)</li>`;
+      }
+      geoSugg.classList.add("open");
+    }, 220);
+  });
+  geoSugg.addEventListener("mousedown", e => {
+    const li = e.target.closest("li[data-k]"); if (!li) return;
+    e.preventDefault();
+    const g = geoRes[+li.dataset.k];
+    const isCity = (g.poiType || []).some(t => /commune|ville/i.test(t)) || g.kind === "municipality";
+    map.flyTo({ center: [g.x, g.y], zoom: isCity ? 13 : 17 });
+    geoQ.value = g.fulltext; geoSugg.classList.remove("open");
+  });
+  geoQ.addEventListener("blur", () => setTimeout(() => geoSugg.classList.remove("open"), 150));
+  document.querySelectorAll(".zones button").forEach(b => b.addEventListener("click", () => {
+    const v = b.dataset.b.split(",").map(Number); map.fitBounds([[v[0], v[1]], [v[2], v[3]]], { padding: 20 });
+  }));
+
+  // Note de bas de panneau
+  const d = new Date(D.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  document.getElementById("note").innerHTML =
+    `Source : <a href="https://acceslibre.beta.gouv.fr/" target="_blank" rel="noopener">Acceslibre</a>, jeu « Accessibilité des établissements recevant du public » sur <a href="https://www.data.gouv.fr/datasets/accessibilite-des-etablissements-recevant-du-public-erp-pour-les-personnes-en-situation-de-handicap" target="_blank" rel="noopener">data.gouv.fr</a>, extrait du ${d}. `
+    + `${fmt.format(D.total)} établissements géolocalisés sur ${fmt.format(D.totalRaw)}. `
+    + `Les catégories reflètent ce qui a été déclaré par les contributeurs, sans vérification sur place. « Accessible avec aménagement » regroupe les entrées avec marches équipées d'une rampe fixe ou amovible ou d'un ascenseur, et les établissements déclarant une entrée spécifique PMR. `
+    + `Fond de carte : Plan IGN (Géoplateforme).`;
+
+  refresh();
+
+  // ---- Couche (deck.gl, rendu GPU des ~600 000 points) ----
+  await mapReady;
+  overlay = new deck.MapboxOverlay({ interleaved: true, layers: [] });
+  map.addControl(overlay);
+  const filterExt = new deck.DataFilterExtension({ filterSize: 1 });
+  let selected = -1;
+  function renderLayer() {
+    if (!overlay) return;
+    const z = map.getZoom();
+    overlay.setProps({
+      layers: [new deck.ScatterplotLayer({
+        id: "erp",
+        data: { length: N, attributes: {
+          getPosition: { value: POS, size: 2 },
+          getFillColor: { value: COL, size: 4, normalized: true },
+          getFilterValue: { value: VIS, size: 1 }
+        } },
+        radiusUnits: "meters", getRadius: 14, radiusMinPixels: z < 7 ? 1.1 : 1.6, radiusMaxPixels: 7,
+        stroked: z >= 11, getLineColor: [255, 255, 255, 230], lineWidthUnits: "pixels", getLineWidth: 1,
+        filterRange: [0.5, 1.5], extensions: [filterExt],
+        updateTriggers: { getFilterValue: filterVersion },
+        pickable: true, autoHighlight: true, highlightColor: [255, 255, 255, 140]
+      }), new deck.ScatterplotLayer({
+        id: "selection",
+        data: selected >= 0 ? [selected] : [],
+        getPosition: k => [POS[2 * k], POS[2 * k + 1]],
+        radiusUnits: "pixels", getRadius: 11, filled: false, stroked: true,
+        getLineColor: [22, 22, 22, 255], lineWidthUnits: "pixels", getLineWidth: 3,
+        updateTriggers: { getPosition: selected }
+      })]
+    });
+  }
+  map.on("zoomend", renderLayer);
+  const pick = p => overlay.pickObject({ x: p.x, y: p.y, radius: 4, layerIds: ["erp"] });
+  const ficheEl = document.getElementById("fiche"), ficheBody = document.getElementById("fiche-body");
+  function openFiche(k) {
+    selected = k;
+    ficheBody.innerHTML = fiche(k);
+    ficheBody.scrollTop = 0;
+    ficheEl.classList.add("open"); ficheEl.setAttribute("aria-hidden", "false");
+    renderLayer();
+    // Si le point se retrouve sous la fiche, on décale la carte
+    const p = map.project([POS[2 * k], POS[2 * k + 1]]), w = map.getContainer().clientWidth;
+    if (w > 720 && p.x > w - ficheEl.offsetWidth - 30) map.panBy([p.x - (w - ficheEl.offsetWidth) / 2, 0]);
+  }
+  function closeFiche() {
+    selected = -1;
+    ficheEl.classList.remove("open"); ficheEl.setAttribute("aria-hidden", "true");
+    renderLayer();
+  }
+  window.ouvrirFiche = openFiche;
+  document.getElementById("fiche-close").addEventListener("click", closeFiche);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && ficheEl.classList.contains("open")) closeFiche(); });
+  map.on("click", e => {
+    const info = pick(e.point);
+    if (info && info.index >= 0) openFiche(info.index);
+  });
+  const tip = document.getElementById("tip");
+  let hoverQueued = false, lastPoint = null;
+  map.on("mousemove", e => {
+    lastPoint = e.point;
+    if (hoverQueued) return;
+    hoverQueued = true;
+    requestAnimationFrame(() => {
+      hoverQueued = false;
+      const info = pick(lastPoint);
+      map.getCanvas().style.cursor = info ? "pointer" : "";
+      if (info && info.index >= 0) {
+        const k = info.index;
+        tip.innerHTML = `${esc(C.n[k] || "Établissement sans nom")}<small>${esc(D.acts[ACT[k]])} · ${esc(D.communes[C.m[k]].split("|")[0])}</small>`;
+        tip.style.display = "block";
+        tip.style.left = Math.min(lastPoint.x + 14, map.getContainer().clientWidth - tip.offsetWidth - 8) + "px";
+        tip.style.top = (lastPoint.y + 14) + "px";
+      } else tip.style.display = "none";
+    });
+  });
+  map.getContainer().addEventListener("mouseleave", () => { tip.style.display = "none"; });
+  window.carte = map;
+  computeVisibility();
+  renderLayer();
+  document.getElementById("loading").remove();
+
+  // ---- Fiches ----
+  const crit = (f, k) => {
+    const j = FIELD[f];
+    if (j === undefined) return null;
+    const c = CRIT[j * N + k];
+    return c ? D.dicts[f][c] : null;
+  };
+  const LIST_LABELS = {
+    entree_dispositif_appel_type: { bouton: "bouton d'appel", interphone: "interphone", visiophone: "visiophone" },
+    accueil_audiodescription: {
+      "avec_équipement_permanent": "équipement permanent (casques et boîtiers à l'accueil)",
+      avec_app: "équipement permanent via une application smartphone",
+      "avec_équipement_occasionnel": "équipement occasionnel selon la programmation",
+      "sans_équipement": "audible par toute la salle, sans équipement"
+    },
+    accueil_equipements_malentendants: {
+      bim: "boucle à induction magnétique fixe", bmp: "boucle à induction magnétique portative",
+      lsf: "langue des signes française (LSF)", lpc: "langue française parlée complétée (LfPC)",
+      sts: "sous-titrage ou transcription simultanée", autres: "autres"
+    },
+    labels: { autre: "Autre", dpt: "Destination pour Tous", mobalib: "Mobalib", th: "Tourisme & Handicap", handiplage: "Handiplage" },
+    labels_familles_handicap: { auditif: "auditif", mental: "mental", moteur: "moteur", visuel: "visuel" },
+    accueil_soignant_experience: { visuel: "visuel", auditif: "auditif", moteur: "moteur", mental: "mental", psychique: "psychique", cognitif: "cognitif" },
+    accueil_espaces_ouverts: { restauration: "cantine ou restauration", bibliotheque: "bibliothèque ou CDI", cour: "cour", sante: "locaux de santé" },
+    accueil_prise_en_charge_patients: {
+      preparation: "préparation ou visite préalable (handicap mental ou psychique)",
+      organisation: "organisation réduisant l'attente (handicap mental ou psychique)",
+      outils_communication: "outils de communication simplifiés",
+      materiel_auscultation: "matériel d'auscultation adapté aux personnes obèses"
+    }
+  };
+  const slugify = v => v.normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toLowerCase()
+    .replace(/[^\w\s-]/g, "").replace(/[-\s]+/g, "-").replace(/^[-_]+|[-_]+$/g, "");
+  function acceslibreUrl(k) {
+    let uc = sparseGet(UC, k); if (uc === undefined) uc = C.comUrl[C.m[k]];
+    let ua = sparseGet(UA, k); if (ua === undefined) ua = C.actUrl[ACT[k]];
+    const ue = C.ue[k];
+    if (uc < 0 || ua < 0) return typeof ue === "string" && /^https?:\/\//.test(ue) ? ue : null;
+    const slug = ue === 0 ? slugify(C.n[k] || "") : ue;
+    return `${D.urlPrefix}${D.uparts[uc]}/a/${D.uparts[ua]}/erp/${slug}/`;
+  }
+  const safeUrl = u => { if (!u) return null; u = u.trim(); if (!/^https?:\/\//i.test(u)) u = "https://" + u; try { return new URL(u).href; } catch (e) { return null; } };
+
+  function fiche(k) {
+    const g = f => crit(f, k);
+    const yn = (f, label, pol = 1, sub = false) => {
+      const v = g(f);
+      if (typeof v !== "boolean") return null;
+      return { label, value: v ? "Oui" : "Non", tone: pol === 0 ? "" : ((v ? 1 : -1) * pol > 0 ? "ok" : "ko"), sub };
+    };
+    const txt = (label, value, tone = "", sub = false, wrap = false) => value == null || value === "" ? null : { label, value: String(value), tone, sub, wrap };
+    const pick = (f, labels, tones = {}) => { const v = g(f); return v == null ? [null, ""] : [labels[v] || v, tones[v] || ""]; };
+    const list = f => { const v = g(f); if (!Array.isArray(v) || !v.length) return null; const L = LIST_LABELS[f] || {}; return v.map(x => L[x] || x).join(", "); };
+    const steps = (nb, sens, rep, mc, rampe) => {
+      const n = g(nb), out = [];
+      if (typeof n === "number") out.push(txt("Nombre de marches", n === 0 ? "Aucune" : n, n === 0 ? "ok" : "warn", true));
+      const [s] = pick(sens, { montant: "Montantes", descendant: "Descendantes" });
+      out.push(txt("Sens des marches", s, "", true));
+      out.push(yn(rep, "Marches repérables (contrastées)", 1, true));
+      out.push(yn(mc, "Main courante", 1, true));
+      const [r, rt] = pick(rampe, { aucune: "Aucune", fixe: "Fixe", amovible: "Amovible" }, { aucune: "ko", fixe: "ok", amovible: "ok" });
+      out.push(txt("Rampe", r, rt, true));
+      return out;
+    };
+
+    const secs = [];
+    const section = (title, sub, rows) => { const r = rows.filter(Boolean); if (r.length) secs.push({ title, sub, rows: r }); };
+
+    section("Transport et stationnement", "", [
+      yn("transport_station_presence", "Arrêt de transport en commun à proximité"),
+      yn("stationnement_presence", "Stationnement dans l'établissement", 0),
+      yn("stationnement_pmr", "Places réservées PMR", 1, true),
+      yn("stationnement_ext_presence", "Stationnement à proximité (moins de 200 m)", 0),
+      yn("stationnement_ext_pmr", "Places réservées PMR", 1, true)
+    ]);
+    const [pd, pdt] = pick("cheminement_ext_pente_degre_difficulte", { "légère": "Légère", importante: "Importante" }, { importante: "ko" });
+    const [pl] = pick("cheminement_ext_pente_longueur", { courte: "Courte", moyenne: "Moyenne", longue: "Longue" });
+    const [dv, dvt] = pick("cheminement_ext_devers", { aucun: "Aucun", "léger": "Léger", important: "Important" }, { aucun: "ok", important: "ko" });
+    section("Chemin extérieur", "de la voirie jusqu'à l'entrée", [
+      yn("cheminement_ext_presence", "Chemin extérieur à emprunter", 0),
+      yn("cheminement_ext_terrain_stable", "Revêtement stable (ni gravier, ni herbe…)"),
+      yn("cheminement_ext_plain_pied", "De plain-pied"),
+      ...steps("cheminement_ext_nombre_marches", "cheminement_ext_sens_marches", "cheminement_ext_reperage_marches", "cheminement_ext_main_courante", "cheminement_ext_rampe"),
+      yn("cheminement_ext_ascenseur", "Ascenseur ou élévateur", 0),
+      yn("cheminement_ext_ascenseur_pmr", "Utilisable en fauteuil roulant", 1, true),
+      yn("cheminement_ext_pente_presence", "Pente", -1),
+      txt("Difficulté de la pente", pd, pdt, true),
+      txt("Longueur de la pente", pl, "", true),
+      txt("Dévers (inclinaison latérale)", dv, dvt),
+      yn("cheminement_ext_bande_guidage", "Bande de guidage au sol"),
+      yn("cheminement_ext_retrecissement", "Rétrécissement du chemin (moins de 90 cm)", -1),
+      yn("cheminement_ext_signaletique_exterieure", "Signalétique extérieure")
+    ]);
+    const [pm, pmt] = pick("entree_porte_manoeuvre", { battante: "Battante", coulissante: "Coulissante", tourniquet: "Tourniquet", tambour: "Tambour" }, { tourniquet: "ko", tambour: "ko" });
+    const [pt] = pick("entree_porte_type", { manuelle: "Manuelle", automatique: "Automatique" });
+    const larg = g("entree_largeur_mini");
+    section("Entrée", "", [
+      yn("entree_reperage", "Entrée facilement repérable"),
+      yn("entree_plain_pied", "De plain-pied (sans marche ni ressaut)"),
+      ...steps("entree_marches", "entree_marches_sens", "entree_marches_reperage", "entree_marches_main_courante", "entree_marches_rampe"),
+      yn("entree_ascenseur", "Ascenseur ou élévateur", 0),
+      yn("entree_ascenseur_pmr", "Utilisable en fauteuil roulant", 1, true),
+      yn("entree_pmr", "Entrée spécifique PMR", 0),
+      yn("entree_porte_presence", "Porte", 0),
+      txt("Ouverture", pm, pmt, true),
+      txt("Type de porte", pt, "", true),
+      yn("entree_vitree", "Porte vitrée", 0, true),
+      yn("entree_vitree_vitrophanie", "Vitrage repérable (bandes contrastées)", 1, true),
+      txt("Largeur minimale de passage", typeof larg === "number" && larg > 0 ? `${larg} cm` : null),
+      yn("entree_dispositif_appel", "Dispositif d'appel"),
+      txt("Type", list("entree_dispositif_appel_type"), "", true, true),
+      yn("entree_balise_sonore", "Balise sonore"),
+      yn("entree_aide_humaine", "Aide humaine possible")
+    ]);
+    const [pers, perst] = pick("accueil_personnels", { "formés": "Formé au handicap", "non-formés": "Présent, non formé", aucun: "Aucun" }, { "formés": "ok", aucun: "ko" });
+    section("Accueil", "", [
+      yn("accueil_visibilite", "Accueil visible depuis l'entrée"),
+      txt("Personnel d'accueil", pers, perst),
+      yn("accueil_cheminement_plain_pied", "Chemin jusqu'à l'accueil de plain-pied"),
+      ...steps("accueil_cheminement_nombre_marches", "accueil_cheminement_sens_marches", "accueil_cheminement_reperage_marches", "accueil_cheminement_main_courante", "accueil_cheminement_rampe"),
+      yn("accueil_cheminement_ascenseur", "Ascenseur ou élévateur jusqu'à l'accueil", 0),
+      yn("accueil_cheminement_ascenseur_pmr", "Utilisable en fauteuil roulant", 1, true),
+      yn("accueil_retrecissement", "Rétrécissement du passage (moins de 90 cm)", -1),
+      yn("accueil_ascenseur_etage", "Ascenseur vers les étages", 0),
+      yn("accueil_ascenseur_etage_pmr", "Utilisable en fauteuil roulant", 1, true),
+      yn("accueil_equipements_malentendants_presence", "Équipements pour personnes sourdes ou malentendantes"),
+      txt("Équipements", list("accueil_equipements_malentendants"), "", true, true),
+      yn("accueil_audiodescription_presence", "Audiodescription"),
+      txt("Modalités", list("accueil_audiodescription"), "", true, true),
+      yn("accueil_signaletique_interieure", "Signalétique intérieure")
+    ]);
+    section("Sanitaires", "", [
+      yn("sanitaires_presence", "Sanitaires ouverts au public", 0),
+      yn("sanitaires_adaptes", "Adaptés aux personnes en fauteuil roulant", 1, true)
+    ]);
+    const nch = g("accueil_chambre_nombre_accessibles");
+    section("Hébergement", "", [
+      txt("Chambres accessibles", typeof nch === "number" ? nch : null, nch > 0 ? "ok" : nch === 0 ? "ko" : ""),
+      yn("accueil_chambre_douche_plain_pied", "Douche de plain-pied"),
+      yn("accueil_chambre_douche_siege", "Siège de douche"),
+      yn("accueil_chambre_douche_barre_appui", "Barre d'appui dans la douche"),
+      yn("accueil_chambre_sanitaires_barre_appui", "Barre d'appui près des toilettes"),
+      yn("accueil_chambre_sanitaires_espace_usage", "Espace d'usage à côté des toilettes"),
+      yn("accueil_chambre_numero_visible", "Numéro de chambre facilement repérable"),
+      yn("accueil_chambre_equipement_alerte", "Dispositif d'alerte adapté (flash, vibreur…)"),
+      yn("accueil_chambre_accompagnement", "Accompagnement personnalisé")
+    ]);
+    const [cl, clt] = pick("accueil_classes_accessibilite", { toutes: "Toutes", partielle: "Au moins une", aucune: "Aucune" }, { toutes: "ok", aucune: "ko" });
+    section("Établissement scolaire", "", [
+      txt("Salles de classe accessibles", cl, clt),
+      txt("Accessible en fauteuil roulant", list("accueil_espaces_ouverts"), "", false, true)
+    ]);
+    section("Santé", "", [
+      yn("accueil_soignant", "Soignant formé ou expérimenté"),
+      txt("Handicaps concernés", list("accueil_soignant_experience"), "", true, true),
+      yn("accueil_salle_consultation_accessible", "Salle de consultation accessible"),
+      yn("accueil_consultation_domicile", "Consultation à domicile possible"),
+      txt("Prise en charge adaptée", list("accueil_prise_en_charge_patients"), "", false, true)
+    ]);
+    section("Bureau de vote", "", [
+      yn("transport_bureau_de_vote_accessibilite", "Transport adapté proposé"),
+      yn("accueil_isoloir_accessibilite", "Isoloir accessible"),
+      yn("accueil_urne_accessibilite", "Urne accessible")
+    ]);
+    section("Labels et conformité", "", [
+      txt("Labels", list("labels"), "ok", false, true),
+      txt("Handicaps couverts", list("labels_familles_handicap"), "", true, true),
+      yn("conformite", "Déclaré conforme à la réglementation")
+    ]);
+
+    // En bref
+    const sp = g("stationnement_pmr"), spe = g("stationnement_ext_pmr");
+    const tStat = sp === true || spe === true ? ["ok", "Oui"] : sp === false || spe === false ? ["ko", "Non"] : ["na", "Non renseigné"];
+    const cat = CAT[k];
+    const tEnt = [["ok", "Plain-pied"], ["ok", "Aménagée"], ["ko", "Marches"], ["na", "Non renseignée"]][cat];
+    const ap = g("accueil_personnels");
+    const tAcc = ap === "formés" ? ["ok", "Personnel formé"] : ap === "non-formés" ? ["", "Non formé"] : ap === "aucun" ? ["ko", "Sans personnel"] : ["na", "Non renseigné"];
+    const sa = g("sanitaires_adaptes"), spr = g("sanitaires_presence");
+    const tSan = sa === true ? ["ok", "Adaptés"] : spr === false ? ["", "Aucun"] : sa === false ? ["ko", "Non adaptés"] : ["na", "Non renseigné"];
+    const tile = (label, [cls, v]) => `<div class="f-tile ${cls}"><b>${label}</b><span>${v}</span></div>`;
+
+    // Nombre d'informations renseignées
+    let filled = 0;
+    for (let j = 0; j < D.fields.length; j++) if (CRIT[j * N + k]) filled++;
+
+    // Liens
+    const links = [];
+    const al = acceslibreUrl(k);
+    if (al) links.push(`<a class="primary" href="${esc(al)}" target="_blank" rel="noopener">Voir sur Acceslibre ↗</a>`);
+    const site = safeUrl(sparseGet(SP.site_internet || { idx: [] }, k));
+    if (site) links.push(`<a href="${esc(site)}" target="_blank" rel="noopener">Site internet ↗</a>`);
+    const contact = safeUrl(sparseGet(SP.contact_url || { idx: [] }, k));
+    if (contact && contact !== site) links.push(`<a href="${esc(contact)}" target="_blank" rel="noopener">Contact ↗</a>`);
+    const reg = safeUrl(sparseGet(SP.registre_url || { idx: [] }, k));
+    if (reg) links.push(`<a href="${esc(reg)}" target="_blank" rel="noopener">Registre d'accessibilité ↗</a>`);
+    const rnb = sparseGet(SP.rnb_id || { idx: [] }, k);
+    if (rnb) links.push(`<a href="https://rnb.beta.gouv.fr/carte?q=${encodeURIComponent(rnb)}" target="_blank" rel="noopener" title="Référentiel national des bâtiments">Bâtiment RNB ${esc(rnb)} ↗</a>`);
+    const siret = sparseGet(SP.siret || { idx: [] }, k);
+    if (siret) links.push(`<a href="https://annuaire-entreprises.data.gouv.fr/etablissement/${encodeURIComponent(siret)}" target="_blank" rel="noopener">SIRET ${esc(siret)} ↗</a>`);
+
+    const [com, cp] = D.communes[C.m[k]].split("|");
+    const adr = [C.d[k], [cp, com].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    const MAIN = ["Transport et stationnement", "Chemin extérieur", "Entrée", "Accueil", "Sanitaires"];
+    const missing = MAIN.filter(t => !secs.some(s => s.title === t));
+    const rowHtml = r => `<div class="f-row${r.sub ? " sub" : ""}"><span>${esc(r.label)}</span><span class="v${r.tone ? " " + r.tone : ""}${r.wrap ? " wrap" : ""}">${esc(r.value)}</span></div>`;
+
+    return `
+      <div class="f-act">${esc(D.acts[ACT[k]])}</div>
+      <div class="f-name">${esc(C.n[k] || "Établissement sans nom")}</div>
+      <div class="f-adr">${esc(adr)}</div>
+      <div class="f-badge"><i style="background:${CATS[cat].hex}"></i>Entrée : ${CATS[cat].label.toLowerCase()}</div>
+      ${links.length ? `<div class="f-links">${links.join("")}</div>` : ""}
+      <div class="f-brief">
+        ${tile("Stationnement PMR", tStat)}${tile("Entrée", tEnt)}${tile("Accueil", tAcc)}${tile("Sanitaires", tSan)}
+      </div>
+      <div class="f-complete">${filled} information${filled > 1 ? "s" : ""} d'accessibilité renseignée${filled > 1 ? "s" : ""}</div>
+      ${secs.map(s => `<section class="f-sec"><h3>${esc(s.title)}${s.sub ? ` <small>${esc(s.sub)}</small>` : ""}</h3>${s.rows.map(rowHtml).join("")}</section>`).join("")}
+      ${missing.length ? `<p class="f-empty">Non renseigné : ${missing.map(m => m.toLowerCase()).join(", ")}.</p>` : ""}
+      <div class="f-meta">Informations déclarées sur Acceslibre, sans vérification sur place. Extrait du ${new Date(D.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}.</div>`;
+  }
+})().catch(err => {
+  console.error(err);
+  const l = document.getElementById("loading");
+  if (l) l.textContent = "Impossible de charger les données : " + err.message;
+});
+</script>
+</body>
+</html>
